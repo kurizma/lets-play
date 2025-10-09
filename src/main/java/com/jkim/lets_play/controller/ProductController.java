@@ -33,7 +33,12 @@ public class ProductController {
     public Product createProduct(@RequestBody Product product) {
         return productService.createProduct(product);
     }
-
+    
+    @GetMapping("/user/{userId}")
+    public List<Product> getProductsByUserId(@PathVariable String userId) {
+        return productService.getProductsByUserId(userId);
+    }
+    
     @PutMapping("/{id}")
     public Product updateProduct(@PathVariable String id, @RequestBody Product productDetail) {
         return productService.updateProduct(id, productDetail);
