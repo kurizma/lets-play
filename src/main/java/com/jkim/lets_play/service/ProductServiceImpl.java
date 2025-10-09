@@ -1,4 +1,4 @@
-import com.jkim.lets_play.service;
+package com.jkim.lets_play.service;
 
 import com.jkim.lets_play.model.Product;
 import com.jkim.lets_play.repository.ProductRepository;

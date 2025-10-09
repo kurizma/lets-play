@@ -29,6 +29,13 @@ public class UserController {
         return userService.getUserById(id);
     }
     
+    @GetMapping("/me")
+    public User getCurrentUser() {
+        // Temporary placeholder (replace when you add authentication)
+        // Later, extract current user from security context
+        return userService.getAllUsers().get(0);
+    }
+    
     @PostMapping
     public User createUser(@RequestBody User user) {
         return userService.createUser(user);
