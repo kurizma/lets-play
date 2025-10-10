@@ -20,7 +20,9 @@ public class AuthServiceImpl implements AuthService {
     
     @Override
     public User authenticate(String email, String password) {
+        System.out.println("Trying to find user with email: " + email);
         Optional<User> foundUser = userRepository.findByEmail(email);
+        System.out.println("User found? " + foundUser.isPresent());
         if (foundUser.isPresent() && foundUser.get().getPassword().equals(password)) {
             return foundUser.get();
         }

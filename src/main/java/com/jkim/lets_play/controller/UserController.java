@@ -33,7 +33,7 @@ public class UserController {
     public User getCurrentUser() {
         // Temporary placeholder (replace when you add authentication)
         // Later, extract current user from security context
-        return userService.getAllUsers().get(0);
+        return userService.getAllUsers().get(1);
     }
     
     @PostMapping

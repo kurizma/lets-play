@@ -4,7 +4,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 // tell mongo to use products
-@Document(collection = "products")
+@Document(collection = "Product")
 public class Product {
     
     @Id
