@@ -15,10 +15,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/register").permitAll()
-                        .anyRequest().permitAll() // any endpoint; remove when deployed production
+                        .anyRequest().authenticated()
                 );
         return http.build();
         
     }
     
 }
+
+// to.do - add jwt filter to spr security to filter chain
