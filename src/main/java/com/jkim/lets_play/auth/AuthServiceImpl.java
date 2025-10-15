@@ -1,5 +1,6 @@
 package com.jkim.lets_play.auth;
 
+import com.jkim.lets_play.exception.AuthException;
 import com.jkim.lets_play.model.User;
 import com.jkim.lets_play.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,7 +30,7 @@ public class AuthServiceImpl implements AuthService {
         if (foundUser.isPresent() && passwordEncoder.matches(password, foundUser.get().getPassword())) {
             return foundUser.get();
         }
-        return null; // throw a custom exception if needed, maybe look into this when we get to that part
+        throw new AuthException("Invalid email or password");
     }
     
 }

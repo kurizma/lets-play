@@ -5,6 +5,7 @@ import com.jkim.lets_play.service.UserService;
 import com.jkim.lets_play.dto.LoginRequest;
 import com.jkim.lets_play.dto.RegisterRequest;
 import com.jkim.lets_play.response.LoginResponse;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class AuthController {
     }
     
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest loginRequest) {
+    public LoginResponse login(@Valid @RequestBody LoginRequest loginRequest) {
         User user = authService.authenticate(
                 loginRequest.getEmail(), loginRequest.getPassword()
                 );
@@ -30,7 +31,7 @@ public class AuthController {
     }
     
     @PostMapping("/register")
-    public User register(@RequestBody RegisterRequest req) {
+    public User register(@Valid @RequestBody RegisterRequest req) {
         User user = new User();
         user.setName(req.getName());
         user.setEmail(req.getEmail());
