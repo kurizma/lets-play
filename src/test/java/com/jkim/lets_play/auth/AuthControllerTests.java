@@ -32,7 +32,7 @@ class AuthControllerTests {
     private UserService userService;
     
     @MockitoBean
-    private JwtUtil jwtUtil
+    private JwtUtil jwtUtil;
     
     // --- Register endpoint validation ---
     @Test
