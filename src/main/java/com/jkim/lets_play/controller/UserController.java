@@ -1,8 +1,11 @@
 package com.jkim.lets_play.controller;
 
 import com.jkim.lets_play.model.User;
+import com.jkim.lets_play.response.UserResponse;
 import com.jkim.lets_play.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,21 +22,22 @@ public class UserController {
         this.userService = userService;
     }
     
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public List<User> getAllUsers() {
+    public List<UserResponse> getAllUsers() {
         return userService.getAllUsers();
     }
     
     @GetMapping("/{id}")
-    public Optional<User> getUserById(@PathVariable String id) {
+    public Optional<UserResponse> getUserById(@PathVariable String id) {
         return userService.getUserById(id);
     }
     
     @GetMapping("/me")
-    public User getCurrentUser() {
+    public UserResponse getCurrentUser() {
         // Temporary placeholder (replace when you add authentication)
         // Later, extract current user from security context
-        return userService.getAllUsers().get(1);
+        return userService.getAllUsers().get(0);
     }
     
     @PostMapping
@@ -46,10 +50,11 @@ public class UserController {
         // userDetail should have updated fields, id is from the path
         return userService.updateUser(id, userDetail);
     }
-    
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable String id) {
+    public ResponseEntity<String> deleteUser(@PathVariable String id) {
         userService.deleteUser((id));
+        return ResponseEntity.ok("User Deleted");
     }
     
 }

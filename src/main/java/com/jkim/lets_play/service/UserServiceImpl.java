@@ -2,12 +2,14 @@ package com.jkim.lets_play.service;
 
 import com.jkim.lets_play.model.User;
 import com.jkim.lets_play.repository.UserRepository;
+import com.jkim.lets_play.response.UserResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -30,8 +32,9 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    public Optional<User> getUserById(String id) {
-        return userRepository.findById(id);
+    public Optional<UserResponse> getUserById(String id) {
+        return userRepository.findById(id)
+                .map(user -> new UserResponse(user.getName()));
     }
     
     @Override
@@ -40,8 +43,11 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserResponse> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(user -> new UserResponse(user.getName()))
+                .collect(Collectors.toList());
     }
     
     @Override
