@@ -3,6 +3,7 @@ package com.jkim.lets_play.service;
 import com.jkim.lets_play.model.User;
 import com.jkim.lets_play.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,15 +14,18 @@ public class UserServiceImpl implements UserService {
     
     // creating constructor for DI
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     
     @Autowired
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
     
     // impl the interface methods
     @Override
     public User createUser(User user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
     
