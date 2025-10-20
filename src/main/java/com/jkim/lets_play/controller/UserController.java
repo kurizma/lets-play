@@ -46,9 +46,20 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
     
-    @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.createUser(user);
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/create")
+    public ResponseEntity<UserResponse> createUserAsAdmin(@RequestBody User user) {
+        if (user.getRole() == null || user.getRole().trim().isEmpty()) {
+            user.setRole("USER");
+        }
+        
+        User createdUser = userService.createUser(user);
+        UserResponse response = new UserResponse(
+                createdUser.getName(),
+                createdUser.getEmail(),
+                createdUser.getRole()
+        );
+        return ResponseEntity.ok(response);
     }
     
     @PutMapping("/{id}")
