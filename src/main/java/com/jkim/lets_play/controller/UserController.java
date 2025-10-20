@@ -7,12 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 public class UserController {
     
     private final UserService userService;
@@ -34,10 +35,15 @@ public class UserController {
     }
     
     @GetMapping("/me")
-    public UserResponse getCurrentUser() {
-        // Temporary placeholder (replace when you add authentication)
-        // Later, extract current user from security context
-        return userService.getAllUsers().get(0);
+    public ResponseEntity<UserResponse> getCurrentUserEmail() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userService.getUserByEmail(email)
+                .map(user -> ResponseEntity.ok(new UserResponse(
+                        user.getName(),
+                        user.getEmail(),
+                        user.getRole()
+                )))
+                .orElse(ResponseEntity.notFound().build());
     }
     
     @PostMapping
@@ -57,4 +63,20 @@ public class UserController {
         return ResponseEntity.ok("User Deleted");
     }
     
+//    // futureCase - promote
+//    @PreAuthorize("hasRole('ADMIN')")
+//    @PutMapping("/{id}/promote")
+//    public ResponseEntity<String> promoteUser(@PathVariable String id) {
+//        Optional<User> optionalUser = userService.getUserById(id);
+//        if (optionalUser.isPresent()) {
+//            User user = optionalUser.get();
+//            user.setRole("ADMIN");
+//            userService.updateUser(id, user);
+//            return ResponseEntity.ok("User promoted to ADMIN.");
+//        } else {
+//            return ResponseEntity.notFound().build();
+//        }
+//    }
+//
+
 }

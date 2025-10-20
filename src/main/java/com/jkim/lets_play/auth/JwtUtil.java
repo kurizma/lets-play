@@ -5,6 +5,7 @@ package com.jkim.lets_play.auth;
 // token parsing
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -16,7 +17,8 @@ import java.util.Date;
 @Component
 public class JwtUtil {
     
-    private final SecretKey SECRET_KEY = Keys.hmacShaKeyFor("your_256_bit_secret_key__must_be_32byteslong".getBytes());
+    private final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(
+            "your_256_bit_secret_key__must_be_32byteslong".getBytes());
 
     
     public String generateToken(String email, String role) {
@@ -37,34 +39,33 @@ public class JwtUtil {
     public  boolean validateToken(String token) {
 
         try {
-            Claims claims = (Claims) Jwts.parser()
+            Jws<Claims> claimsJws = Jwts.parser()
                     .verifyWith(SECRET_KEY)
                     .build()
                     .parseSignedClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
+            System.err.println("JWT Validation failed: " + e.getMessage());
             return false;
         }
         
     }
     
     public String extractEmail(String token) {
-        Claims claims = Jwts.parser()
+        Jws<Claims> claimsJws = Jwts.parser()
                 .verifyWith(SECRET_KEY)
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
-        return claims.getSubject();
+                .parseSignedClaims(token);
+        return claimsJws.getPayload().getSubject(); // extract email
     }
     
     public String extractRole(String token) {
         
-        Claims claims = Jwts.parser()
+        Jws<Claims> claimsJws = Jwts.parser()
                 .verifyWith((SecretKey) SECRET_KEY)
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
-        return claims.get("role", String.class);
+                .parseSignedClaims(token);
+        return claimsJws.getPayload().get("role", String.class);
         
     }
     
