@@ -27,6 +27,9 @@ public class UserServiceImpl implements UserService {
     // impl the interface methods
     @Override
     public User createUser(User user) {
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Email already exists: " + user.getEmail());
+        }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }

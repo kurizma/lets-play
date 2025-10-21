@@ -62,11 +62,59 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
     
-    @PutMapping("/{id}")
-    public User updateUser(@PathVariable String id, @RequestBody User userDetail) {
-        // userDetail should have updated fields, id is from the path
-        return userService.updateUser(id, userDetail);
+//    @PutMapping("/{id}")
+//    public User updateUser(@PathVariable String id, @RequestBody User userDetail) {
+//        // userDetail should have updated fields, id is from the path
+//        return userService.updateUser(id, userDetail);
+//    }
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PutMapping("/update/{id}")
+    public ResponseEntity<UserResponse> updateUser(@PathVariable String id, @RequestBody User userDetail) {
+        
+        // Get current authenticated user
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        
+        // Check if user exists in DB
+        Optional<User> existingUser = userService.getUserById(id)
+                .flatMap(resp -> userService.getUserByEmail(resp.getEmail()));
+        
+        if (existingUser.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        // Check if current user is admin
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities()
+                .stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+        
+        // Users can only edit themselves unless they are admin
+        if (!isAdmin && !existingUser.get().getEmail().equals(currentEmail)) {
+            return ResponseEntity.status(403).build();
+        }
+        
+        // Merge updates instead of full overwrite
+        User userToUpdate = existingUser.get();
+        if (userDetail.getName() != null && !userDetail.getName().isBlank()) {
+            userToUpdate.setName(userDetail.getName());
+        }
+        if (userDetail.getPassword() != null && !userDetail.getPassword().isBlank()) {
+            userToUpdate.setPassword(userDetail.getPassword());
+        }
+        if (isAdmin && userDetail.getRole() != null) {
+            userToUpdate.setRole(userDetail.getRole()); // Only admins can change roles
+        }
+        
+        User updated = userService.updateUser(id, userToUpdate);
+        UserResponse response = new UserResponse(
+                updated.getName(),
+                updated.getEmail(),
+                updated.getRole()
+        );
+        return ResponseEntity.ok(response);
     }
+    
+    
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable String id) {
