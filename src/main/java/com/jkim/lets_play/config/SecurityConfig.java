@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()  // Public endpoints
-                        .requestMatchers("/api/products/**").permitAll()  // Public product GETs if needed
+                        .requestMatchers("/api/products/**").permitAll()  // Public product GETs if needed; remember method GET
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
