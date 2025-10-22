@@ -1,6 +1,8 @@
 package com.jkim.lets_play.auth;
 
 import com.jkim.lets_play.exception.AuthException;
+import com.jkim.lets_play.exception.BadRequestException;
+import com.jkim.lets_play.exception.ResourceNotFoundException;
 import com.jkim.lets_play.model.User;
 import com.jkim.lets_play.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,13 +26,33 @@ public class AuthServiceImpl implements AuthService {
     
     @Override
     public User authenticate(String email, String password) {
-        // System.out.println("Trying to find user with email: " + email);
-        Optional<User> foundUser = userRepository.findByEmail(email);
-        // System.out.println("User found? " + foundUser.isPresent());
-        if (foundUser.isPresent() && passwordEncoder.matches(password, foundUser.get().getPassword())) {
-            return foundUser.get();
+        
+        // basic input check
+        if (email == null || email.isBlank()) {
+            throw new BadRequestException("Email cannot be empty");
         }
-        throw new AuthException("Invalid email or password");
+        
+        if (password== null || password.isBlank()) {
+            throw new BadRequestException("Password cannot be empty");
+            
+        }
+        
+        // user check
+        Optional<User> foundUser = userRepository.findByEmail(email);
+        if (foundUser.isEmpty()) {
+            throw new ResourceNotFoundException("No user found with email: " + email);
+        }
+        
+        User user = foundUser.get();
+
+        // password validation check
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new AuthException("Invalid email or password");
+        }
+        
+        // auth success >> Return auth users
+        return user;
+        
     }
     
 }

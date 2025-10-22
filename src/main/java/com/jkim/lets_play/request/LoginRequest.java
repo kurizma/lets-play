@@ -1,4 +1,4 @@
-package com.jkim.lets_play.dto;
+package com.jkim.lets_play.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

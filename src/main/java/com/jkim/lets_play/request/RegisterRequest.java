@@ -1,4 +1,4 @@
-package com.jkim.lets_play.dto;
+package com.jkim.lets_play.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -26,3 +26,8 @@ public class RegisterRequest{
     public void setPassword(String password) { this.password = password; }
     
 }
+
+//@Pattern(
+//        regexp = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{6,24}$",
+//        message = "Password must contain a number, an uppercase letter, and a special character"
+//)

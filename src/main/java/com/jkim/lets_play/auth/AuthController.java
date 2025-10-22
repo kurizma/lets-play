@@ -2,8 +2,8 @@ package com.jkim.lets_play.auth;
 
 import com.jkim.lets_play.model.User;
 import com.jkim.lets_play.service.UserService;
-import com.jkim.lets_play.dto.LoginRequest;
-import com.jkim.lets_play.dto.RegisterRequest;
+import com.jkim.lets_play.request.LoginRequest;
+import com.jkim.lets_play.request.RegisterRequest;
 import com.jkim.lets_play.response.LoginResponse;
 import com.jkim.lets_play.response.UserResponse;
 import jakarta.validation.Valid;

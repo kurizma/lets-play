@@ -1,5 +1,6 @@
 package com.jkim.lets_play.model;
 
+import jakarta.validation.constraints.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -9,9 +10,18 @@ public class Product {
     
     @Id
     private String id;
+    
+    @NotBlank(message = "Product name is required")
+    @Size(min = 2, max = 100, message = "Product name must be between 2 and 100 characters")
     private String name;
+    
+    @NotBlank(message = "Product description is required")
+    @Size(max = 500, message = "Description cannot exceed 500 characters")
     private String description;
+    
+    @Positive(message = "Price must be greater than zero")
     private Double price;
+    
     private String userId;
     
     public Product() {}

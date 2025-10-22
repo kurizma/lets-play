@@ -1,15 +1,21 @@
 package com.jkim.lets_play.controller;
 
+import com.jkim.lets_play.exception.ForbiddenException;
+import com.jkim.lets_play.exception.ResourceNotFoundException;
 import com.jkim.lets_play.model.User;
 import com.jkim.lets_play.response.UserResponse;
 import com.jkim.lets_play.service.UserService;
+import com.jkim.lets_play.auth.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -17,10 +23,12 @@ import java.util.Optional;
 public class UserController {
     
     private final UserService userService;
+    private final JwtUtil jwtUtil;
     
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.jwtUtil = jwtUtil;
     }
     
     @PreAuthorize("hasRole('ADMIN')")
@@ -62,25 +70,22 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
     
-//    @PutMapping("/{id}")
-//    public User updateUser(@PathVariable String id, @RequestBody User userDetail) {
-//        // userDetail should have updated fields, id is from the path
-//        return userService.updateUser(id, userDetail);
-//    }
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PutMapping("/update/{id}")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable String id, @RequestBody User userDetail) {
+    public ResponseEntity<Map<String, Object>> updateUser(@PathVariable String id, @RequestBody User userDetail) {
         
         // Get current authenticated user
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         
         // Check if user exists in DB
-        Optional<User> existingUser = userService.getUserById(id)
+        Optional<User> existingUserOpt = userService.getUserById(id)
                 .flatMap(resp -> userService.getUserByEmail(resp.getEmail()));
         
-        if (existingUser.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        if (existingUserOpt.isEmpty()) {
+            throw new ResourceNotFoundException("User not found with ID: " + id);
         }
+        
+        User existingUser = existingUserOpt.get();
         
         // Check if current user is admin
         boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
@@ -89,28 +94,48 @@ public class UserController {
                 .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
         
         // Users can only edit themselves unless they are admin
-        if (!isAdmin && !existingUser.get().getEmail().equals(currentEmail)) {
-            return ResponseEntity.status(403).build();
+        if (!isAdmin && !existingUser.getEmail().equals(currentEmail)) {
+            throw new ForbiddenException("You do not have permission to modify this user");
         }
+        
+        // store old fields before update ( for token regen)
+        String oldEmail = existingUser.getEmail();
+        String oldRole = existingUser.getRole();
         
         // Merge updates instead of full overwrite
-        User userToUpdate = existingUser.get();
         if (userDetail.getName() != null && !userDetail.getName().isBlank()) {
-            userToUpdate.setName(userDetail.getName());
+            existingUser.setName(userDetail.getName());
         }
         if (userDetail.getPassword() != null && !userDetail.getPassword().isBlank()) {
-            userToUpdate.setPassword(userDetail.getPassword());
-        }
-        if (isAdmin && userDetail.getRole() != null) {
-            userToUpdate.setRole(userDetail.getRole()); // Only admins can change roles
+            existingUser.setPassword(userDetail.getPassword());
         }
         
-        User updated = userService.updateUser(id, userToUpdate);
-        UserResponse response = new UserResponse(
-                updated.getName(),
-                updated.getEmail(),
-                updated.getRole()
-        );
+        // only Admins can change role or email
+        if (isAdmin) {
+            if (userDetail.getRole() != null && !userDetail.getRole().isBlank()) {
+                existingUser.setRole(userDetail.getRole());
+            }
+            if (userDetail.getEmail() != null && !userDetail.getEmail().isBlank()) {
+                existingUser.setEmail(userDetail.getEmail());
+            }
+        }
+        
+        User updated = userService.updateUser(id, existingUser);
+        
+        // re-issue jwt token
+        String newToken = null;
+        
+        if (!oldEmail.equals(updated.getEmail()) || !oldRole.equals(updated.getRole())) {
+            newToken = jwtUtil.generateToken(updated.getEmail(), updated.getRole());
+        }
+
+        // prep response
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "User updated successfully.");
+        response.put("user", new UserResponse(updated.getName(), updated.getEmail(), updated.getRole()));
+        if (newToken != null) {
+            response.put("token", newToken);
+        }
         return ResponseEntity.ok(response);
     }
     
