@@ -5,23 +5,25 @@ import com.jkim.lets_play.exception.ConflictException;
 import com.jkim.lets_play.exception.ResourceNotFoundException;
 import com.jkim.lets_play.model.Product;
 import com.jkim.lets_play.repository.ProductRepository;
-import com.jkim.lets_play.service.ProductService;
+import com.jkim.lets_play.response.ProductResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ProductServiceImpl implements ProductService {
     
     // create constructor for DI
     private final ProductRepository productRepository;
+    private final ProductService productService;
     
     @Autowired
-    public ProductServiceImpl(ProductRepository productRepository) {
+    public ProductServiceImpl(ProductRepository productRepository, ProductService productService) {
         this.productRepository = productRepository;
+        this.productService = productService;
     }
     
     // impl the interface methods
@@ -45,15 +47,20 @@ public class ProductServiceImpl implements ProductService {
     }
     
     @Override
-    public Product getProductById(String id) {
-        return productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+    public ProductResponse getProductById(@PathVariable String id) {
+        Product p = productService.getProductById(id);
+        return new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getUserId());
     }
+
     
     @Override
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public List<ProductResponse> getAllProducts() {
+        return productService.getAllProducts()
+                .stream()
+                .map(p -> new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getUserId()))
+                .toList();
     }
+
     
     @Override
     public List<Product> getProductsByUserId(String userId) {
