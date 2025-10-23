@@ -3,9 +3,12 @@ package com.jkim.lets_play.controller;
 import com.jkim.lets_play.exception.ForbiddenException;
 import com.jkim.lets_play.exception.ResourceNotFoundException;
 import com.jkim.lets_play.model.User;
+import com.jkim.lets_play.request.AdminRequest;
+import com.jkim.lets_play.request.UserRequest;
 import com.jkim.lets_play.response.UserResponse;
 import com.jkim.lets_play.service.UserService;
 import com.jkim.lets_play.auth.JwtUtil;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -56,10 +59,12 @@ public class UserController {
     
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
-    public ResponseEntity<UserResponse> createUserAsAdmin(@RequestBody User user) {
-        if (user.getRole() == null || user.getRole().trim().isEmpty()) {
-            user.setRole("USER");
-        }
+    public ResponseEntity<UserResponse> createUserAsAdmin(@Valid @RequestBody UserRequest userRequest) {
+        User user = new User();
+        user.setName(userRequest.getName());
+        user.setEmail(userRequest.getEmail());
+        user.setPassword(userRequest.getPassword());
+        user.setRole("USER"); // Always default; can be changed by update later
         
         User createdUser = userService.createUser(user);
         UserResponse response = new UserResponse(
@@ -72,7 +77,7 @@ public class UserController {
     
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PutMapping("/update/{id}")
-    public ResponseEntity<Map<String, Object>> updateUser(@PathVariable String id, @RequestBody User userDetail) {
+    public ResponseEntity<Map<String, Object>> updateUser(@PathVariable String id, @RequestBody UserRequest userRequest) {
         
         // Get current authenticated user
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -103,21 +108,11 @@ public class UserController {
         String oldRole = existingUser.getRole();
         
         // Merge updates instead of full overwrite
-        if (userDetail.getName() != null && !userDetail.getName().isBlank()) {
-            existingUser.setName(userDetail.getName());
+        if (userRequest.getName() != null && !userRequest.getName().isBlank()) {
+            existingUser.setName(userRequest.getName());
         }
-        if (userDetail.getPassword() != null && !userDetail.getPassword().isBlank()) {
-            existingUser.setPassword(userDetail.getPassword());
-        }
-        
-        // only Admins can change role or email
-        if (isAdmin) {
-            if (userDetail.getRole() != null && !userDetail.getRole().isBlank()) {
-                existingUser.setRole(userDetail.getRole());
-            }
-            if (userDetail.getEmail() != null && !userDetail.getEmail().isBlank()) {
-                existingUser.setEmail(userDetail.getEmail());
-            }
+        if (userRequest.getPassword() != null && !userRequest.getPassword().isBlank()) {
+            existingUser.setPassword(userRequest.getPassword());
         }
         
         User updated = userService.updateUser(id, existingUser);
@@ -139,6 +134,19 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
     
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/promote")
+    public ResponseEntity<String> updateUserRole(
+            @PathVariable String id,
+            @Valid @RequestBody AdminRequest adminRequest) {
+        User user = userService.getUserById(id)
+                .flatMap(resp -> userService.getUserByEmail(resp.getEmail()))
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
+        user.setRole(adminRequest.getRole());
+        userService.updateUser(id, user);
+        
+        return ResponseEntity.ok("User role updated to " + adminRequest.getRole());
+    }
     
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
@@ -147,20 +155,4 @@ public class UserController {
         return ResponseEntity.ok("User Deleted");
     }
     
-//    // futureCase - promote
-//    @PreAuthorize("hasRole('ADMIN')")
-//    @PutMapping("/{id}/promote")
-//    public ResponseEntity<String> promoteUser(@PathVariable String id) {
-//        Optional<User> optionalUser = userService.getUserById(id);
-//        if (optionalUser.isPresent()) {
-//            User user = optionalUser.get();
-//            user.setRole("ADMIN");
-//            userService.updateUser(id, user);
-//            return ResponseEntity.ok("User promoted to ADMIN.");
-//        } else {
-//            return ResponseEntity.notFound().build();
-//        }
-//    }
-//
-
 }
