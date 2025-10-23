@@ -12,5 +12,6 @@ public interface UserService {
     Optional<User> getUserByEmail(String email);
     List<UserResponse> getAllUsers();
     User updateUser(String id, User user);
+    User getUserEntityById(String id);
     void deleteUser(String id);
 }

@@ -36,6 +36,8 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Password cannot be empty");
             
         }
+//        System.out.println("DEBUG -> Email: " + email);
+//        System.out.println("DEBUG -> Password (raw): " + password);
         
         // user check
         Optional<User> foundUser = userRepository.findByEmail(email);
@@ -44,11 +46,21 @@ public class AuthServiceImpl implements AuthService {
         }
         
         User user = foundUser.get();
+//        System.out.println("DEBUG -> User found: " + user.getEmail());
+//        System.out.println("DEBUG -> Stored hash: " + user.getPassword());
 
+        
         // password validation check
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        boolean matches = passwordEncoder.matches(password, user.getPassword());
+//        System.out.println("DEBUG -> Password match result: " + matches);
+        
+        if (!matches) {
+            System.out.println("DEBUG -> Password does NOT match for email: " + email);
             throw new AuthException("Invalid email or password");
         }
+        
+//        System.out.println("DEBUG -> Authentication successful for: " + user.getEmail()
+//                + " | Role: " + user.getRole());
         
         // auth success >> Return auth users
         return user;

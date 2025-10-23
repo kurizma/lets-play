@@ -37,6 +37,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<UserResponse> getAllUsers() {
+        System.out.println("DEBUG -> Entered UserController.getAllUsers()");
         return userService.getAllUsers();
     }
     
@@ -135,17 +136,18 @@ public class UserController {
     }
     
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}/promote")
+    @PutMapping("/promote/{id}")
     public ResponseEntity<String> updateUserRole(
             @PathVariable String id,
             @Valid @RequestBody AdminRequest adminRequest) {
-        User user = userService.getUserById(id)
-                .flatMap(resp -> userService.getUserByEmail(resp.getEmail()))
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
-        user.setRole(adminRequest.getRole());
+        
+        // Fetch user entity directly
+        User user = userService.getUserEntityById(id);  // FIX: fetch from repository
+        user.setRole(adminRequest.getRole().toUpperCase()); // e.g., “ADMIN” or “USER”
+        
         userService.updateUser(id, user);
         
-        return ResponseEntity.ok("User role updated to " + adminRequest.getRole());
+        return ResponseEntity.ok("User role updated to " + user.getRole());
     }
     
     @PreAuthorize("hasRole('ADMIN')")

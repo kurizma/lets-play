@@ -7,7 +7,9 @@ import com.jkim.lets_play.exception.ResourceNotFoundException;
 import com.jkim.lets_play.model.Product;
 import com.jkim.lets_play.model.User;
 import com.jkim.lets_play.repository.UserRepository;
+import com.jkim.lets_play.request.ProductRequest;
 import com.jkim.lets_play.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,9 +44,14 @@ public class ProductController {
         return productService.getProductById(id);
     }
     
+    @GetMapping("/user/{userId}")
+    public List<Product> getProductsByUserId(@PathVariable String userId) {
+        return productService.getProductsByUserId(userId);
+    }
+    
     // auth'd users can create
     @PostMapping
-    public Product createProduct(@RequestHeader("Authorization") String authHeader, @RequestBody Product product) {
+    public Product createProduct(@RequestHeader("Authorization") String authHeader, @Valid @RequestBody ProductRequest productRequest) {
         
         // extract token
         String token = authHeader.replace("Bearer ", "");
@@ -54,21 +61,22 @@ public class ProductController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
         
-        // attach uID to product
+        // map request to product
+        Product product = new Product();
+        product.setName(productRequest.getName());
+        product.setDescription(productRequest.getDescription());
+        product.setPrice(productRequest.getPrice());
         product.setUserId(user.getId());
         
         // save and return
         return productService.createProduct(product);
     }
     
-    @GetMapping("/user/{userId}")
-    public List<Product> getProductsByUserId(@PathVariable String userId) {
-        return productService.getProductsByUserId(userId);
-    }
+
     
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable String id, @RequestBody Product productDetail) {
+    public ResponseEntity<Product> updateProduct(@PathVariable String id, @Valid @RequestBody ProductRequest productRequest) {
         // get current auth user email
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         
@@ -90,16 +98,10 @@ public class ProductController {
             throw new ForbiddenException("You do not have permission to modify this product");
         }
         
-        // merge updates instd of overWr
-        if (productDetail.getName() != null && !productDetail.getName().isBlank()) {
-            existingProduct.setName(productDetail.getName());
-        }
-        if (productDetail.getDescription() != null) {
-            existingProduct.setDescription(productDetail.getDescription());
-        }
-        if (productDetail.getPrice() != null) {
-            existingProduct.setPrice(productDetail.getPrice());
-        }
+        // update only allowed fields from DTO
+        existingProduct.setName(productRequest.getName());
+        existingProduct.setDescription(productRequest.getDescription());
+        existingProduct.setPrice(productRequest.getPrice());
         
         Product updated = productService.updateProduct(id, existingProduct);
         return ResponseEntity.ok(updated);
