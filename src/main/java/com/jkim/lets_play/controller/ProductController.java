@@ -8,6 +8,7 @@ import com.jkim.lets_play.model.Product;
 import com.jkim.lets_play.model.User;
 import com.jkim.lets_play.repository.UserRepository;
 import com.jkim.lets_play.request.ProductRequest;
+import com.jkim.lets_play.response.ProductResponse;
 import com.jkim.lets_play.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,32 +36,61 @@ public class ProductController {
     }
     
     @GetMapping
-    public List<Product> getAllProducts() {
-        return productService.getAllProducts();
+    public List<ProductResponse> getAllProducts() {
+        return productService.getAllProducts()
+                .stream()
+                .map(p -> new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getUserId()))
+                .toList();
     }
     
     @GetMapping("/{id}")
-    public Product getProductById(@PathVariable String id) {
-        return productService.getProductById(id);
+    public ProductResponse getProductById(@PathVariable String id) {
+        Product p = productService.getProductById(id);
+        return new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getUserId());
     }
+
     
-    @GetMapping("/user/{userId}")
-    public List<Product> getProductsByUserId(@PathVariable String userId) {
-        return productService.getProductsByUserId(userId);
+    @GetMapping("/{userId}/products")
+    public List<ProductResponse> getProductsByUserId(@PathVariable String userId) {
+        return productService.getProductsByUserId(userId)
+                .stream()
+                .map(p -> new ProductResponse(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getUserId()))
+                .toList();
     }
+
     
     // auth'd users can create
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PostMapping
-    public Product createProduct(@RequestHeader("Authorization") String authHeader, @Valid @RequestBody ProductRequest productRequest) {
-        
+    public ProductResponse createProduct(@RequestHeader("Authorization") String authHeader, @Valid @RequestBody ProductRequest productRequest) {
+        System.out.println("DEBUG -> Entered ProductController.createProduct()");
+
         // extract token
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new BadRequestException("Missing or invalid Authorization header");
+        }
         String token = authHeader.replace("Bearer ", "");
-        String email = jwtUtil.extractEmail(token);
+        System.out.println("DEBUG -> Extracted Token: " + token);
+        
+        jwtUtil.extractEmail(token);
+        String email;
+        try {
+            email = jwtUtil.extractEmail(token);
+            System.out.println("DEBUG -> Extracted Email from token: " + email);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ForbiddenException("Failed to extract email from token");
+        }
         
         // find user by email, 404 if none
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
         
+        System.out.println("DEBUG -> Found user: " + user.getName() + " | ID: " + user.getId());
+        
+        if (user.getId() == null) {
+            throw new IllegalStateException("Authenticated user has no valid database ID!");
+        }
         // map request to product
         Product product = new Product();
         product.setName(productRequest.getName());
@@ -68,15 +98,36 @@ public class ProductController {
         product.setPrice(productRequest.getPrice());
         product.setUserId(user.getId());
         
+        System.out.println("DEBUG -> Product ready to save: "
+                + "[Name=" + product.getName()
+                + ", Price=" + product.getPrice()
+                + ", UserId=" + product.getUserId() + "]");
+        
         // save and return
-        return productService.createProduct(product);
+//        Product saved = productService.createProduct(product);
+//        return new ProductResponse(saved.getId(), saved.getName(), saved.getDescription(), saved.getPrice(), saved.getUserId());
+        try {
+            Product saved = productService.createProduct(product);
+            System.out.println("DEBUG -> Product successfully saved. ID: " + saved.getId());
+            return new ProductResponse(
+                    saved.getId(),
+                    saved.getName(),
+                    saved.getDescription(),
+                    saved.getPrice(),
+                    saved.getUserId()
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("ERROR -> Failed to save product: " + e.getMessage());
+            throw new BadRequestException("Could not save product: " + e.getMessage());
+        }
     }
     
 
     
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable String id, @Valid @RequestBody ProductRequest productRequest) {
+    public ResponseEntity<ProductResponse> updateProduct(@PathVariable String id, @Valid @RequestBody ProductRequest productRequest) {
         // get current auth user email
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         
@@ -104,7 +155,16 @@ public class ProductController {
         existingProduct.setPrice(productRequest.getPrice());
         
         Product updated = productService.updateProduct(id, existingProduct);
-        return ResponseEntity.ok(updated);
+        ProductResponse response = new ProductResponse(
+                updated.getId(),
+                updated.getName(),
+                updated.getDescription(),
+                updated.getPrice(),
+                updated.getUserId()
+        );
+        
+        return ResponseEntity.ok(response);
+
     }
     
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")

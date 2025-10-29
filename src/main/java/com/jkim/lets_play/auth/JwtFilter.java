@@ -71,6 +71,7 @@ public class JwtFilter extends OncePerRequestFilter {
             System.out.println("----------------------------------");
         }
         filterChain.doFilter(request, response);
+        System.out.println("JWT DEBUG -> Exited JwtFilter after chain call for URI: " + request.getRequestURI());
     }
     
 }

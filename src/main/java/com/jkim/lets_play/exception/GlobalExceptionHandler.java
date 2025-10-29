@@ -4,13 +4,16 @@ import org.springframework.web.bind.*;
 import org.springframework.http.*;
 import org.springframework.validation.*;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @RestControllerAdvice
@@ -19,16 +22,17 @@ public class GlobalExceptionHandler {
     // handle validation err (beans validation, @valid)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, String> fieldErrors = new HashMap<>();
-        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            fieldErrors.put(error.getField(), error.getDefaultMessage());
-        }
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Validation Error");
-        body.put("details", fieldErrors);
+        body.put("error", "Bad Request");
         
+        // Build clear message for tests & clients
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+        
+        body.put("message", message);
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
     
@@ -73,10 +77,34 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
     
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthorizationDenied(AuthorizationDeniedException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, "Access Denied: " + ex.getMessage());
+    }
+    
     // 500 - fail safe
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+        ex.printStackTrace(); // Still log full stack in console
+        
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("error", "Internal Server Error");
+        
+        // Add key details about the error
+        body.put("exception", ex.getClass().getSimpleName());
+        body.put("message", ex.getMessage() != null ? ex.getMessage() : "Unexpected server error");
+        body.put("cause", ex.getCause() != null ? ex.getCause().toString() : "No root cause");
+        
+        // Optional: include a short stack preview (for local dev only)
+        List<String> stackPreview = Arrays.stream(ex.getStackTrace())
+                .limit(5)
+                .map(StackTraceElement::toString)
+                .collect(Collectors.toList());
+        body.put("stackTrace", stackPreview);
+        
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     
     

@@ -131,7 +131,7 @@
 - **Description**: Get details of a product by product ID.
 
 ### 12. List All Products by User
-- **Endpoint**: `GET /api/products/user/{userId}`
+- **Endpoint**: `GET /api/products/{userId}/products`
 - **Description**: Get all products created by a specific user.
 
 ### 13. Create Product

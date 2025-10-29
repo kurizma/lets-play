@@ -10,5 +10,6 @@ public interface ProductRepository extends MongoRepository<Product, String> {
     // add custom queries;
     List<Product> findByUserId(String userId);
     Optional<Product> findByName(String name);
+    boolean existsByName(String name);
     void deleteByUserId(String userId);
 }
